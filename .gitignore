@@ -1,0 +1,16 @@
+node_modules/
+dist/
+*.log
+.DS_Store
+.env
+.env.local
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.coverage
+coverage/
+
+# OpenAPI source files (only merged spec is tracked)
+scripts/openapi/
