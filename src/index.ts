@@ -15,7 +15,7 @@ server.registerTool(
   "search",
   {
     description:
-      "Search for available Storyblok API endpoints. Returns operations with their behavior hint (readOnly, idempotent, destructive, or undefined for mutating non-idempotent).",
+      "Search for available Storyblok API endpoints. Returns operations with their behavior hint (readOnly, destructive, or undefined/idempotent for mutating).",
     inputSchema: {
       query: z
         .string()
@@ -45,7 +45,7 @@ server.registerTool(
 function createExecuteTool(
   name: string,
   description: string,
-  expectedBehavior: OperationBehavior | undefined,
+  allowedBehaviors: (OperationBehavior | undefined)[],
   annotations: {
     readOnlyHint?: boolean;
     destructiveHint?: boolean;
@@ -77,8 +77,8 @@ function createExecuteTool(
     async ({ operation, parameters, region }) => {
       // Validate operation behavior matches expected
       const actualBehavior = getOperationBehavior(operation);
-      if (actualBehavior !== expectedBehavior) {
-        const expectedDesc = expectedBehavior ?? "mutating (no behavior hint)";
+      if (!allowedBehaviors.includes(actualBehavior)) {
+        const allowedDesc = allowedBehaviors.map(b => b ?? "mutating (no behavior hint)").join(" or ");
         const actualDesc = actualBehavior ?? "mutating (no behavior hint)";
         return {
           content: [
@@ -88,7 +88,7 @@ function createExecuteTool(
                 success: false,
                 operation,
                 error: `Operation behavior mismatch`,
-                message: `This tool is for ${expectedDesc} operations, but "${operation}" is ${actualDesc}. Use the appropriate execute tool for this operation's behavior.`,
+                message: `This tool is for ${allowedDesc} operations, but "${operation}" is ${actualDesc}. Use the appropriate execute tool for this operation's behavior.`,
               }, null, 2),
             },
           ],
@@ -127,22 +127,22 @@ function createExecuteTool(
 createExecuteTool(
   "execute_readonly",
   "Execute a read-only Storyblok API operation. Use for operations with behavior: 'readOnly' (e.g., listing stories, getting assets).",
-  "readOnly",
+  ["readOnly"],
   {
     readOnlyHint: true,
     openWorldHint: false,
   }
 );
 
-// Idempotent operations (PUT, publish/unpublish, etc.)
+// Mutating operations (POST creates, PUT updates, publish/unpublish, etc.)
 createExecuteTool(
-  "execute_idempotent",
-  "Execute an idempotent Storyblok API operation. Use for operations with behavior: 'idempotent' (e.g., updating stories, publishing). Safe to retry.",
-  "idempotent",
+  "execute",
+  "Execute a mutating Storyblok API operation. Use for operations with behavior: 'idempotent' or no behavior hint (e.g., creating stories, updating stories, publishing, uploading assets).",
+  ["idempotent", undefined],
   {
     readOnlyHint: false,
     destructiveHint: false,
-    idempotentHint: true,
+    idempotentHint: false,
     openWorldHint: false,
   }
 );
@@ -151,24 +151,11 @@ createExecuteTool(
 createExecuteTool(
   "execute_destructive",
   "Execute a destructive Storyblok API operation. Use for operations with behavior: 'destructive' (e.g., deleting stories, clearing trash). Data may be permanently lost.",
-  "destructive",
+  ["destructive"],
   {
     readOnlyHint: false,
     destructiveHint: true,
     idempotentHint: true,
-    openWorldHint: false,
-  }
-);
-
-// Mutating non-idempotent operations (POST creates, PATCH, duplicate)
-createExecuteTool(
-  "execute",
-  "Execute a mutating Storyblok API operation. Use for operations without a behavior hint (e.g., creating stories, uploading assets). Not idempotent - calling twice may create duplicates.",
-  undefined,
-  {
-    readOnlyHint: false,
-    destructiveHint: false,
-    idempotentHint: false,
     openWorldHint: false,
   }
 );
