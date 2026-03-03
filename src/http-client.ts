@@ -19,6 +19,9 @@ export interface HttpResponse {
   data: unknown;
 }
 
+const MAX_RETRIES = 3;
+const BASE_DELAY_MS = 1000;
+
 export class StoryblokApiError extends Error {
   constructor(
     message: string,
@@ -70,34 +73,48 @@ export async function makeStoryblokRequest(
     fetchOptions.body = JSON.stringify(options.body);
   }
 
-  // Make the request
-  const response = await fetch(url.toString(), fetchOptions);
+  // Make the request with retry logic for 429 rate limit responses
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    const response = await fetch(url.toString(), fetchOptions);
 
-  // Parse response body
-  let data: unknown;
-  const contentType = response.headers.get("content-type");
-  if (contentType?.includes("application/json")) {
-    data = await response.json();
-  } else {
-    const text = await response.text();
-    data = text || null;
+    // Parse response body
+    let data: unknown;
+    const contentType = response.headers.get("content-type");
+    if (contentType?.includes("application/json")) {
+      data = await response.json();
+    } else {
+      const text = await response.text();
+      data = text || null;
+    }
+
+    // Retry on 429 if we have attempts remaining
+    if (response.status === 429 && attempt < MAX_RETRIES) {
+      const retryAfter = response.headers.get("Retry-After");
+      const delay = retryAfter
+        ? parseInt(retryAfter, 10) * 1000
+        : BASE_DELAY_MS * Math.pow(2, attempt);
+      await new Promise((resolve) => setTimeout(resolve, delay));
+      continue;
+    }
+
+    // Check for errors
+    if (!response.ok) {
+      throw new StoryblokApiError(
+        `Storyblok API error: ${response.status} ${response.statusText}`,
+        response.status,
+        response.statusText,
+        data
+      );
+    }
+
+    return {
+      status: response.status,
+      statusText: response.statusText,
+      data,
+    };
   }
 
-  // Check for errors
-  if (!response.ok) {
-    throw new StoryblokApiError(
-      `Storyblok API error: ${response.status} ${response.statusText}`,
-      response.status,
-      response.statusText,
-      data
-    );
-  }
-
-  return {
-    status: response.status,
-    statusText: response.statusText,
-    data,
-  };
+  throw new StoryblokApiError("Max retries exceeded", 429, "Too Many Requests");
 }
 
 export { ConfigurationError };

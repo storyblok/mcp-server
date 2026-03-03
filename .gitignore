@@ -13,4 +13,4 @@ dist/
 coverage/
 
 # OpenAPI source files (only merged spec is tracked)
-scripts/openapi/
+scripts/openapi/*/

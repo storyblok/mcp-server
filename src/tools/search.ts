@@ -1,13 +1,11 @@
-import { STORYBLOK_OPENAPI } from "../openapi/index.js";
-
-/**
- * Operation behavior hint.
- * - undefined: Mutating, non-idempotent (e.g., POST creating new resources)
- * - 'readOnly': Does not modify the environment
- * - 'destructive': May delete or destroy data (idempotent)
- * - 'idempotent': Mutating but safe to retry (e.g., PUT updates)
- */
-export type OperationBehavior = 'readOnly' | 'destructive' | 'idempotent';
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { z } from "zod";
+import { getOperationMap } from "../openapi/index.js";
+import type { OperationBehavior } from "../utils/parameters.js";
+import {
+  getResponseFields,
+  type ResponseFieldMap,
+} from "../utils/response-fields.js";
 
 export interface SearchResult {
   operations: Array<{
@@ -17,6 +15,7 @@ export interface SearchResult {
     summary?: string;
     description?: string;
     behavior?: OperationBehavior;
+    responseFields?: ResponseFieldMap;
   }>;
 }
 
@@ -24,34 +23,59 @@ export async function toolSearch(args: { query: string }): Promise<SearchResult>
   const query = args.query.toLowerCase();
   const operations: SearchResult["operations"] = [];
 
-  // Search through OpenAPI spec for matching endpoints
-  for (const [path, pathItem] of Object.entries(STORYBLOK_OPENAPI.paths)) {
-    for (const [method, operation] of Object.entries(pathItem)) {
-      if (
-        ["get", "post", "put", "delete", "patch"].includes(method.toLowerCase())
-      ) {
-        const op = operation as any;
-        const operationId = op.operationId || `${method.toUpperCase()} ${path}`;
-        const summary = op.summary || "";
-        const description = op.description || "";
-        const searchText = `${operationId} ${path} ${summary} ${description}`.toLowerCase();
+  for (const op of getOperationMap().values()) {
+    const operationId = op.getOperationId();
+    const summary = op.getSummary() ?? "";
+    const description = op.getDescription() ?? "";
+    const searchText = `${operationId} ${op.path} ${summary} ${description}`.toLowerCase();
 
-        if (searchText.includes(query)) {
-          // Extract behavior hint if present
-          const behavior = op["x-mcp-behavior"] as OperationBehavior | undefined;
+    if (searchText.includes(query)) {
+      const behavior = op.schema['x-mcp-behavior'] as OperationBehavior | undefined;
+      const responseFields = getResponseFields(operationId);
 
-          operations.push({
-            operationId,
-            method: method.toUpperCase(),
-            path,
-            summary,
-            description,
-            ...(behavior && { behavior }),
-          });
-        }
-      }
+      operations.push({
+        operationId,
+        method: op.method.toUpperCase(),
+        path: op.path,
+        summary,
+        description,
+        ...(behavior && { behavior }),
+        ...(responseFields && { responseFields }),
+      });
     }
   }
 
   return { operations };
+}
+
+export function registerSearchTool(server: McpServer) {
+  server.registerTool(
+    "search",
+    {
+      description:
+        "Search for available Storyblok API endpoints. Returns operations with their behavior hint (readOnly, destructive, or undefined/idempotent for mutating).",
+      inputSchema: {
+        query: z
+          .string()
+          .describe(
+            "Search query to find endpoints (e.g., 'stories', 'assets', 'spaces')"
+          ),
+      },
+      annotations: {
+        readOnlyHint: true,
+        openWorldHint: false,
+      } as const,
+    },
+    async ({ query }) => {
+      const result = await toolSearch({ query });
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(result),
+          },
+        ],
+      };
+    }
+  );
 }

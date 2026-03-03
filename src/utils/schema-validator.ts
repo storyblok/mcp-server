@@ -1,28 +1,11 @@
 import { z, type ZodTypeAny, type SafeParseReturnType } from "zod";
-import { STORYBLOK_OPENAPI } from "../openapi/index.js";
 
 type JsonSchema = Record<string, unknown>;
 
 /**
- * Resolve a $ref pointer to the actual schema from components
- */
-function resolveRef(ref: string): JsonSchema | null {
-  const match = ref.match(/^#\/components\/schemas\/(.+)$/);
-  if (!match) return null;
-  const components = (STORYBLOK_OPENAPI as { components?: { schemas?: Record<string, JsonSchema> } }).components;
-  return components?.schemas?.[match[1]] ?? null;
-}
-
-/**
  * Convert JSON Schema to Zod schema (minimal implementation for Storyblok API)
  */
-function jsonSchemaToZod(schema: JsonSchema): ZodTypeAny {
-  // Handle $ref
-  if (schema.$ref) {
-    const resolved = resolveRef(schema.$ref as string);
-    if (resolved) return jsonSchemaToZod(resolved);
-  }
-
+function jsonSchemaToZod(schema: JsonSchema, coerce = false): ZodTypeAny {
   // Handle type
   const type = schema.type;
 
@@ -30,7 +13,7 @@ function jsonSchemaToZod(schema: JsonSchema): ZodTypeAny {
   if (Array.isArray(type)) {
     const nonNullType = type.find((t) => t !== "null");
     if (nonNullType && type.includes("null")) {
-      const baseSchema = jsonSchemaToZod({ ...schema, type: nonNullType });
+      const baseSchema = jsonSchemaToZod({ ...schema, type: nonNullType }, coerce);
       return baseSchema.nullable();
     }
   }
@@ -40,7 +23,7 @@ function jsonSchemaToZod(schema: JsonSchema): ZodTypeAny {
 
   switch (type) {
     case "string":
-      zodSchema = z.string();
+      zodSchema = coerce ? z.coerce.string() : z.string();
       if (schema.minLength) zodSchema = (zodSchema as z.ZodString).min(schema.minLength as number);
       if (schema.maxLength) zodSchema = (zodSchema as z.ZodString).max(schema.maxLength as number);
       if (schema.pattern) zodSchema = (zodSchema as z.ZodString).regex(new RegExp(schema.pattern as string));
@@ -49,19 +32,19 @@ function jsonSchemaToZod(schema: JsonSchema): ZodTypeAny {
       break;
 
     case "number":
-      zodSchema = z.number();
+      zodSchema = coerce ? z.coerce.number() : z.number();
       if (schema.minimum !== undefined) zodSchema = (zodSchema as z.ZodNumber).min(schema.minimum as number);
       if (schema.maximum !== undefined) zodSchema = (zodSchema as z.ZodNumber).max(schema.maximum as number);
       break;
 
     case "integer":
-      zodSchema = z.number().int();
+      zodSchema = coerce ? z.coerce.number().int() : z.number().int();
       if (schema.minimum !== undefined) zodSchema = (zodSchema as z.ZodNumber).min(schema.minimum as number);
       if (schema.maximum !== undefined) zodSchema = (zodSchema as z.ZodNumber).max(schema.maximum as number);
       break;
 
     case "boolean":
-      zodSchema = z.boolean();
+      zodSchema = coerce ? z.coerce.boolean() : z.boolean();
       break;
 
     case "array":
@@ -110,29 +93,21 @@ function jsonSchemaToZod(schema: JsonSchema): ZodTypeAny {
 }
 
 /**
- * Validate a value against a JSON Schema (from OpenAPI spec)
+ * Validate a value against a JSON Schema (from OpenAPI spec).
+ * When coerce is true, string/number/integer types use z.coerce to handle
+ * LLMs returning IDs as the wrong primitive type (e.g. number as string).
  */
 export function validateSchema(
   schema: unknown,
-  value: unknown
+  value: unknown,
+  coerce = false
 ): SafeParseReturnType<unknown, unknown> {
   if (!schema) {
     return { success: true, data: value };
   }
 
-  let resolvedSchema = schema as JsonSchema;
-
-  // Resolve $ref if present
-  if (resolvedSchema.$ref) {
-    const resolved = resolveRef(resolvedSchema.$ref as string);
-    if (!resolved) {
-      return { success: true, data: value };
-    }
-    resolvedSchema = resolved;
-  }
-
   try {
-    const zodSchema = jsonSchemaToZod(resolvedSchema);
+    const zodSchema = jsonSchemaToZod(schema as JsonSchema, coerce);
     return zodSchema.safeParse(value);
   } catch {
     // If schema conversion fails, allow the value through

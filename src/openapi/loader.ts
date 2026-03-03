@@ -1,5 +1,7 @@
 import fs from "fs";
 import path from "path";
+import Oas from "oas";
+import type { Operation } from "oas/operation";
 
 export interface OpenApiSpec {
   openapi: string;
@@ -14,6 +16,8 @@ export interface OpenApiSpec {
 
 // Cached spec to avoid reloading on every call
 let cachedSpec: OpenApiSpec | null = null;
+let cachedOas: Oas | null = null;
+let cachedOperationMap: Map<string, Operation> | null = null;
 
 /**
  * Get the directory containing the OpenAPI spec.
@@ -51,8 +55,35 @@ export function getOpenApiSpec(): OpenApiSpec {
 }
 
 /**
+ * Get the Oas wrapper instance (lazy, cached).
+ */
+export function getOasInstance(): Oas {
+  if (cachedOas) return cachedOas;
+  cachedOas = new Oas(getOpenApiSpec() as ConstructorParameters<typeof Oas>[0]);
+  return cachedOas;
+}
+
+/**
+ * Get a pre-built operationId → Operation lookup Map (lazy, cached).
+ * Built once by iterating all paths/methods in the Oas wrapper.
+ */
+export function getOperationMap(): Map<string, Operation> {
+  if (cachedOperationMap) return cachedOperationMap;
+  const map = new Map<string, Operation>();
+  for (const pathOps of Object.values(getOasInstance().getPaths())) {
+    for (const op of Object.values(pathOps)) {
+      map.set(op.getOperationId(), op as Operation);
+    }
+  }
+  cachedOperationMap = map;
+  return cachedOperationMap;
+}
+
+/**
  * Clear the cached spec. Useful for testing or hot-reloading.
  */
 export function clearSpecCache(): void {
   cachedSpec = null;
+  cachedOas = null;
+  cachedOperationMap = null;
 }

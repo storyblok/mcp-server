@@ -1,4 +1,4 @@
-import { STORYBLOK_OPENAPI } from "../openapi/index.js";
+import { getOperationMap } from "../openapi/index.js";
 import { validateSchema, formatValidationErrors } from "./schema-validator.js";
 
 /**
@@ -11,21 +11,9 @@ export type OperationBehavior = 'readOnly' | 'destructive' | 'idempotent';
  * Returns undefined for mutating, non-idempotent operations (POST/PATCH creates).
  */
 export function getOperationBehavior(operation: string): OperationBehavior | undefined {
-  for (const [path, pathItem] of Object.entries(STORYBLOK_OPENAPI.paths)) {
-    for (const [method, op] of Object.entries(pathItem)) {
-      if (!["get", "post", "put", "delete", "patch"].includes(method.toLowerCase())) {
-        continue;
-      }
-
-      const opData = op as { operationId?: string; "x-mcp-behavior"?: OperationBehavior };
-      const operationId = opData.operationId || `${method.toUpperCase()} ${path}`;
-
-      if (operationId === operation || `${method.toUpperCase()} ${path}` === operation) {
-        return opData["x-mcp-behavior"];
-      }
-    }
-  }
-  return undefined;
+  const op = getOperationMap().get(operation);
+  if (!op) return undefined;
+  return op.schema['x-mcp-behavior'] as OperationBehavior | undefined;
 }
 
 export interface ParameterDef {
@@ -60,48 +48,26 @@ export interface ValidationError {
 export function findOperationDetails(
   operation: string
 ): OperationDetails | null {
-  for (const [path, pathItem] of Object.entries(STORYBLOK_OPENAPI.paths)) {
-    // Extract path-level parameters (like space_id)
-    const pathLevelParams = (
-      pathItem as { parameters?: ParameterDef[] }
-    ).parameters;
+  const op = getOperationMap().get(operation);
+  if (!op) return null;
 
-    for (const [method, op] of Object.entries(pathItem)) {
-      if (
-        !["get", "post", "put", "delete", "patch"].includes(method.toLowerCase())
-      ) {
-        continue;
-      }
+  // getParameters() auto-merges path-level and operation-level parameters
+  const parameters: ParameterDef[] = op.getParameters()
+    .filter(p => ["path", "query", "header"].includes(p.in))
+    .map(p => ({
+      name: p.name,
+      in: p.in as ParameterDef["in"],
+      required: p.required,
+      schema: p.schema as Record<string, unknown> | undefined,
+    }));
 
-      const opData = op as {
-        operationId?: string;
-        parameters?: ParameterDef[];
-        requestBody?: OperationDetails["requestBody"];
-      };
-      const operationId =
-        opData.operationId || `${method.toUpperCase()} ${path}`;
-
-      if (
-        operationId === operation ||
-        `${method.toUpperCase()} ${path}` === operation
-      ) {
-        // Merge path-level and operation-level parameters
-        const mergedParams = [
-          ...(pathLevelParams || []),
-          ...(opData.parameters || []),
-        ];
-
-        return {
-          method: method.toUpperCase(),
-          path,
-          operationId,
-          parameters: mergedParams.length > 0 ? mergedParams : undefined,
-          requestBody: opData.requestBody,
-        };
-      }
-    }
-  }
-  return null;
+  return {
+    method: op.method.toUpperCase(),
+    path: op.path,
+    operationId: op.getOperationId(),
+    parameters: parameters.length > 0 ? parameters : undefined,
+    requestBody: op.schema.requestBody as OperationDetails["requestBody"] | undefined,
+  };
 }
 
 export function categorizeParameters(
@@ -186,8 +152,10 @@ export function validateParameters(
     }
 
     // Validate schema if value is provided
+    // Coerce types for path/query params: LLMs often return numbers as strings
     if (value !== undefined && paramDef.schema) {
-      const result = validateSchema(paramDef.schema, value);
+      const coerce = paramDef.in === "path" || paramDef.in === "query";
+      const result = validateSchema(paramDef.schema, value, coerce);
       const schemaErrors = formatValidationErrors(result, paramDef.name);
       errors.push(...schemaErrors.map((message) => ({ parameter: paramDef.name, message })));
     }
