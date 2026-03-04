@@ -56,13 +56,21 @@ export function pickFields(
       continue;
     }
 
-    // Validate sub-fields exist on the first element (for arrays) or on the object
+    // Validate sub-fields exist across a sample of elements (for arrays) or on the object
     if (subFields !== null) {
       const value = record[key];
-      const sample = Array.isArray(value) ? value[0] : value;
-      if (typeof sample === "object" && sample !== null) {
+      const samples = Array.isArray(value) ? value.slice(0, 10) : [value];
+      const knownKeys = new Set<string>();
+      for (const sample of samples) {
+        if (typeof sample === "object" && sample !== null) {
+          for (const k of Object.keys(sample as Record<string, unknown>)) {
+            knownKeys.add(k);
+          }
+        }
+      }
+      if (knownKeys.size > 0) {
         for (const sf of subFields) {
-          if (!(sf in (sample as Record<string, unknown>))) {
+          if (!knownKeys.has(sf)) {
             invalidFields.push(`${key}.${sf}`);
           }
         }

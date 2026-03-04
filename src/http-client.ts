@@ -16,11 +16,13 @@ export interface HttpRequestOptions {
 export interface HttpResponse {
   status: number;
   statusText: string;
+  headers: Record<string, string>;
   data: unknown;
 }
 
 const MAX_RETRIES = 3;
 const BASE_DELAY_MS = 1000;
+const REQUEST_TIMEOUT_MS = 30_000;
 
 export class StoryblokApiError extends Error {
   constructor(
@@ -75,13 +77,21 @@ export async function makeStoryblokRequest(
 
   // Make the request with retry logic for 429 rate limit responses
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    const response = await fetch(url.toString(), fetchOptions);
+    const response = await fetch(url.toString(), {
+      ...fetchOptions,
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
 
     // Parse response body
     let data: unknown;
     const contentType = response.headers.get("content-type");
     if (contentType?.includes("application/json")) {
-      data = await response.json();
+      try {
+        data = await response.json();
+      } catch {
+        const text = await response.text();
+        data = text || null;
+      }
     } else {
       const text = await response.text();
       data = text || null;
@@ -107,9 +117,15 @@ export async function makeStoryblokRequest(
       );
     }
 
+    const headers: Record<string, string> = {};
+    response.headers.forEach((value, key) => {
+      headers[key.toLowerCase()] = value;
+    });
+
     return {
       status: response.status,
       statusText: response.statusText,
+      headers,
       data,
     };
   }

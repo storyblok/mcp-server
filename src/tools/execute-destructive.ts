@@ -6,7 +6,7 @@ export function registerExecuteDestructiveTool(server: McpServer) {
     "execute_destructive",
     {
       description:
-        "Execute a destructive Storyblok API operation. Use for operations with behavior: 'destructive' (e.g., deleting stories, clearing trash). Data may be permanently lost.",
+        "Execute a destructive Storyblok API operation. Use for operations with behavior: 'destructive' (e.g., deleting stories, clearing trash). Data may be permanently lost.\n\nOperation IDs are not guessable — always call `search` first to get the exact operationId. Never assume or infer operation names.",
       inputSchema: EXECUTE_INPUT_SCHEMA,
       annotations: {
         readOnlyHint: false,

@@ -1,11 +1,20 @@
+> [!IMPORTANT]
+> **Research Project** — This is an experimental project from the Storyblok Innovation Lab and may change without notice.
+
 # Storyblok MCP Server
 
 An MCP (Model Context Protocol) server for the Storyblok API.
 
 ## Features
 
-- **Tool Search**: Discover available Storyblok API endpoints and tools
-- **Tool Execution**: Execute API calls to Storyblok with automatic parameter handling
+- **Tool Search**: Discover available Storyblok API endpoints by keyword, returning operationIds, behavior hints, and available response fields
+- **Tool Execution**: Execute API calls with automatic parameter handling, split by behavior:
+  - `execute_readonly` — safe read-only operations (GET)
+  - `execute` — mutating/idempotent operations (POST, PUT, PATCH)
+  - `execute_destructive` — destructive operations (DELETE)
+- **Asset Upload**: Upload files or images to Storyblok in a single step — handles asset record creation, S3 upload, and finalization automatically; supports local file paths and HTTP/HTTPS URLs
+- **Pagination**: List operations support `page` and `per_page` parameters; check `pagination.total_pages` in responses
+- **Field Filtering**: Use the `fields` parameter on execute tools to limit large responses to only the fields you need
 
 ## Configuration
 

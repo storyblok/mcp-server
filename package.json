@@ -10,7 +10,9 @@
     "dev": "tsx watch src/index.ts",
     "start": "node dist/index.js",
     "inspect": "npx @modelcontextprotocol/inspector node dist/index.js",
-    "generate-spec": "tsx scripts/generate-merged-spec.ts",
+    "openapi:fetch": "node --env-file=.env --import=tsx/esm scripts/openapi/fetch-spec.ts",
+    "openapi:generate": "tsx scripts/openapi/apply-overlay.ts",
+    "openapi:update": "npm run openapi:fetch && npm run openapi:generate",
     "test": "vitest"
   },
   "dependencies": {

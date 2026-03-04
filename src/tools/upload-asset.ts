@@ -8,6 +8,7 @@ import {
   ConfigurationError,
 } from "../http-client.js";
 import { isConfigured } from "../config.js";
+import type { ToolError } from "../utils/errors.js";
 
 export interface UploadAssetArgs {
   space_id: number;
@@ -20,22 +21,18 @@ export interface UploadAssetArgs {
   region?: string;
 }
 
-export interface UploadAssetResult {
-  success: boolean;
-  message?: string;
-  error?: string;
-  data?: {
+export interface UploadAssetSuccess {
+  success: true;
+  message: string;
+  data: {
     id: number;
     pretty_url: string;
     public_url: string;
     filename: string;
   };
-  details?: {
-    step?: "create_asset" | "read_file" | "s3_upload" | "finish_upload";
-    status?: number;
-    statusText?: string;
-  };
 }
+
+export type UploadAssetResult = UploadAssetSuccess | ToolError;
 
 interface CreateAssetResponse {
   id: number;

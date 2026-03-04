@@ -14,6 +14,7 @@ import {
   getOperationBehavior,
 } from "./parameters.js";
 import { pickFields } from "./response.js";
+import type { ToolError } from "./errors.js";
 
 export async function toolExecute(args: {
   operation: string;
@@ -54,8 +55,9 @@ export async function toolExecute(args: {
       error: "Region required",
       message:
         "This operation does not include a space_id, so the region cannot be auto-detected. " +
-        "Please ask the user which region (eu, us, cn, ap, ca) their Storyblok space is in " +
-        "and provide it via the region parameter.",
+        "You MUST ask the user which region (eu, us, cn, ap, ca) their Storyblok space is in. " +
+        "Do NOT infer or guess the region from context. Wait for the user's explicit answer, " +
+        "then retry with the region parameter.",
     };
   }
 
@@ -96,6 +98,28 @@ export async function toolExecute(args: {
         details: { invalidFields: result.invalidFields },
       };
     }
+
+    // Surface pagination metadata from response headers
+    const totalHeader = response.headers["total"];
+    if (totalHeader !== undefined) {
+      const total = parseInt(totalHeader, 10);
+      const perPage = typeof queryParams.per_page === "number"
+        ? queryParams.per_page
+        : typeof queryParams.per_page === "string"
+        ? parseInt(queryParams.per_page, 10)
+        : 25;
+      const page = typeof queryParams.page === "number"
+        ? queryParams.page
+        : typeof queryParams.page === "string"
+        ? parseInt(queryParams.page, 10)
+        : 1;
+      const totalPages = Math.ceil(total / perPage);
+      return {
+        pagination: { total, page, per_page: perPage, total_pages: totalPages },
+        data: result.data,
+      };
+    }
+
     return result.data;
   } catch (error) {
     if (error instanceof ConfigurationError) {
@@ -113,10 +137,10 @@ export async function toolExecute(args: {
         operation,
         error: `API error: ${error.status} ${error.statusText}`,
         message: error.message,
-        data: error.responseBody,
         details: {
           status: error.status,
           statusText: error.statusText,
+          responseBody: error.responseBody,
         },
       };
     }
@@ -185,13 +209,16 @@ export function makeExecuteHandler(allowedBehaviors: (ReturnType<typeof getOpera
         ],
       };
     } catch (error) {
+      const toolError: ToolError = {
+        success: false,
+        error: "Unexpected error",
+        message: error instanceof Error ? error.message : String(error),
+      };
       return {
         content: [
           {
             type: "text" as const,
-            text: `Error executing tool: ${
-              error instanceof Error ? error.message : String(error)
-            }`,
+            text: JSON.stringify(toolError),
           },
         ],
         isError: true,

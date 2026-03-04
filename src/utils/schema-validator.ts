@@ -1,4 +1,4 @@
-import { z, type ZodTypeAny, type SafeParseReturnType } from "zod";
+import { z, ZodError, type ZodTypeAny, type SafeParseReturnType } from "zod";
 
 type JsonSchema = Record<string, unknown>;
 
@@ -26,7 +26,13 @@ function jsonSchemaToZod(schema: JsonSchema, coerce = false): ZodTypeAny {
       zodSchema = coerce ? z.coerce.string() : z.string();
       if (schema.minLength) zodSchema = (zodSchema as z.ZodString).min(schema.minLength as number);
       if (schema.maxLength) zodSchema = (zodSchema as z.ZodString).max(schema.maxLength as number);
-      if (schema.pattern) zodSchema = (zodSchema as z.ZodString).regex(new RegExp(schema.pattern as string));
+      if (schema.pattern) {
+        try {
+          zodSchema = (zodSchema as z.ZodString).regex(new RegExp(schema.pattern as string));
+        } catch {
+          // Skip invalid regex patterns
+        }
+      }
       if (schema.format === "email") zodSchema = (zodSchema as z.ZodString).email();
       if (schema.format === "url" || schema.format === "uri") zodSchema = (zodSchema as z.ZodString).url();
       break;
@@ -44,7 +50,18 @@ function jsonSchemaToZod(schema: JsonSchema, coerce = false): ZodTypeAny {
       break;
 
     case "boolean":
-      zodSchema = coerce ? z.coerce.boolean() : z.boolean();
+      if (coerce) {
+        zodSchema = z
+          .unknown()
+          .transform((val) => {
+            if (val === "true") return true;
+            if (val === "false") return false;
+            return Boolean(val);
+          })
+          .pipe(z.boolean());
+      } else {
+        zodSchema = z.boolean();
+      }
       break;
 
     case "array":
@@ -109,10 +126,15 @@ export function validateSchema(
   try {
     const zodSchema = jsonSchemaToZod(schema as JsonSchema, coerce);
     return zodSchema.safeParse(value);
-  } catch {
-    // If schema conversion fails, allow the value through
-    // (let the API handle validation)
-    return { success: true, data: value };
+  } catch (error) {
+    return {
+      success: false,
+      error: new ZodError([{
+        code: "custom",
+        message: `Schema validation unavailable: ${error instanceof Error ? error.message : String(error)}`,
+        path: [],
+      }]),
+    };
   }
 }
 

@@ -1,0 +1,528 @@
+overlay: 1.0.0
+info:
+  title: Overlay to update the MAPI Spec
+  version: 0.1.0
+actions:
+
+  # Add missing Statistics Tag
+  - target: $
+    description: Add Statistics Tag, as this is missing from the original OpenAPI spec (upstream!)
+    update:
+      tags:
+        - name: Statistics
+          description: Get Information about your Storyblok Usage
+
+  # ============================================================================
+  # Approvals
+  # https://www.storyblok.com/docs/api/management/approvals
+  # ============================================================================
+
+  - target: $.paths['/v1/spaces/{space_id}/approvals'].post
+    update:
+      x-mcp-include: true
+      x-mcp-priority: 3
+
+  # ============================================================================
+  # Asset Folders
+  # https://www.storyblok.com/docs/api/management/asset-folders
+  # ============================================================================
+
+  - target: $.paths['/v1/spaces/{space_id}/asset_folders'].get
+    update:
+      x-mcp-include: true
+      x-mcp-priority: 2
+      x-mcp-behavior: readOnly
+
+  - target: $.paths['/v1/spaces/{space_id}/asset_folders'].post
+    update:
+      x-mcp-include: true
+      x-mcp-priority: 2
+
+  - target: $.paths['/v1/spaces/{space_id}/asset_folders/{id}'].get
+    update:
+      x-mcp-include: true
+      x-mcp-priority: 2
+      x-mcp-behavior: readOnly
+
+  - target: $.paths['/v1/spaces/{space_id}/asset_folders/{id}'].put
+    update:
+      x-mcp-include: true
+      x-mcp-priority: 2
+      x-mcp-behavior: idempotent
+
+  - target: $.paths['/v1/spaces/{space_id}/asset_folders/{id}'].delete
+    update:
+      x-mcp-include: true
+      x-mcp-priority: 3
+      x-mcp-behavior: destructive
+
+  # ============================================================================
+  # Assets
+  # https://www.storyblok.com/docs/api/management/assets
+  # ============================================================================
+
+  - target: $.paths['/v1/spaces/{space_id}/assets'].get
+    update:
+      x-mcp-include: true
+      x-mcp-priority: 1
+      x-mcp-behavior: readOnly
+
+  - target: $.paths['/v1/spaces/{space_id}/assets'].post
+    update:
+      x-mcp-include: true
+      x-mcp-priority: 1
+
+  - target: $.paths['/v1/spaces/{space_id}/assets/{id}'].get
+    update:
+      x-mcp-include: true
+      x-mcp-priority: 1
+      x-mcp-behavior: readOnly
+
+  - target: $.paths['/v1/spaces/{space_id}/assets/{id}'].patch
+    update:
+      x-mcp-include: true
+      x-mcp-priority: 2
+
+  - target: $.paths['/v1/spaces/{space_id}/assets/{id}'].delete
+    update:
+      x-mcp-include: true
+      x-mcp-priority: 3
+      x-mcp-behavior: destructive
+
+  # GET with side-effect: Permanently clears trash
+  - target: $.paths['/v1/spaces/{space_id}/assets/clear_trash'].get
+    update:
+      x-mcp-include: true
+      x-mcp-priority: 3
+      x-mcp-behavior: destructive
+
+  - target: $.paths['/v1/spaces/{space_id}/assets/{id}/upload_part'].get
+    update:
+      x-mcp-include: true
+      x-mcp-priority: 2
+      x-mcp-behavior: readOnly
+
+  # ============================================================================
+  # Components
+  # https://www.storyblok.com/docs/api/management/components
+  # ============================================================================
+
+  - target: $.paths['/v1/spaces/{space_id}/components'].get
+    update:
+      x-mcp-include: true
+      x-mcp-priority: 1
+      x-mcp-behavior: readOnly
+      description: |
+        List all components in the space. Always call this before creating a component to check if it already exists — if it does, use the updateComponent operation instead.
+
+        NOTE: Each component includes a `schema` field with its full field definitions, which makes list responses large. Unless you need the schema, use `fields: ["components.id", "components.name"]` (or similar) to reduce response size significantly.
+
+  - target: $.paths['/v1/spaces/{space_id}/components'].post
+    update:
+      x-mcp-include: true
+      x-mcp-priority: 3
+      description: |
+        Create a new component. IMPORTANT: Check if the component already exists first using listComponents — if it does, use updateComponent instead. Do NOT include `name` or `slug` as schema fields — these are built-in story properties, not component fields.
+
+  - target: $.paths['/v1/spaces/{space_id}/components/bulk_update'].post
+    update:
+      x-mcp-include: true
+      x-mcp-priority: 3
+
+  - target: $.paths['/v1/spaces/{space_id}/components/{id}'].get
+    update:
+      x-mcp-include: true
+      x-mcp-priority: 1
+      x-mcp-behavior: readOnly
+
+  - target: $.paths['/v1/spaces/{space_id}/components/{id}'].put
+    update:
+      x-mcp-include: true
+      x-mcp-priority: 3
+      x-mcp-behavior: idempotent
+      description: |
+        Update a component by ID. WARNING: The `component.schema` object is replaced in full — always use getComponent first, then merge your changes into the complete schema before submitting. Do NOT include `name` or `slug` as schema fields — these are built-in story properties, not component fields.
+
+  - target: $.paths['/v1/spaces/{space_id}/components/{id}'].delete
+    update:
+      x-mcp-include: true
+      x-mcp-priority: 3
+      x-mcp-behavior: destructive
+
+  - target: $.paths['/v1/spaces/{space_id}/components/{id}/restore'].post
+    update:
+      x-mcp-include: true
+      x-mcp-priority: 3
+
+  - target: $.paths['/v1/spaces/{space_id}/components/{id}/rename_attribute'].post
+    update:
+      x-mcp-include: true
+      x-mcp-priority: 3
+
+  # ============================================================================
+  # Statistics
+  # ============================================================================
+
+  - target: $.paths['/v1/orgs/me/statistics/all_traffic'].get.tags
+    description: Remove then Generate pattern due to library issues
+    remove:
+  - target: $.paths['/v1/orgs/me/statistics/all_traffic'].get
+    update:
+      x-mcp-include: true
+      x-mcp-priority: 3
+      x-mcp-behavior: readOnly
+      tags: ["Statistics"]
+      description: "Get all traffic statistics. This operation is region-dependent and does not include a space_id — do NOT assume a region, ask the user first."
+
+  - target: $.paths['/v1/orgs/me/statistics/assets_traffic'].get.tags
+    description: Remove then Generate pattern due to library issues
+    remove:
+  - target: $.paths['/v1/orgs/me/statistics/assets_traffic'].get
+    update:
+      x-mcp-include: true
+      x-mcp-priority: 3
+      x-mcp-behavior: readOnly
+      tags: ["Statistics"]
+      description: "Get assets traffic statistics. This operation is region-dependent and does not include a space_id — do NOT assume a region, ask the user first."
+
+  # ============================================================================
+  # Releases
+  # https://www.storyblok.com/docs/api/management/releases
+  # ============================================================================
+
+  # GET with side-effect: Releases all scheduled releases
+  - target: $.paths['/v1/spaces/{space_id}/releases/release_all'].get
+    update:
+      x-mcp-include: true
+      x-mcp-priority: 2
+      x-mcp-behavior: idempotent
+
+  - target: $.paths['/v1/spaces/{space_id}/releases'].get
+    update:
+      x-mcp-include: true
+      x-mcp-priority: 2
+      x-mcp-behavior: readOnly
+
+  - target: $.paths['/v1/spaces/{space_id}/releases'].post
+    update:
+      x-mcp-include: true
+      x-mcp-priority: 2
+
+  - target: $.paths['/v1/spaces/{space_id}/releases/{id}'].get
+    update:
+      x-mcp-include: true
+      x-mcp-priority: 2
+      x-mcp-behavior: readOnly
+
+  - target: $.paths['/v1/spaces/{space_id}/releases/{id}'].patch
+    update:
+      x-mcp-include: true
+      x-mcp-priority: 2
+
+  - target: $.paths['/v1/spaces/{space_id}/releases/{id}'].put
+    update:
+      x-mcp-include: true
+      x-mcp-priority: 2
+      x-mcp-behavior: idempotent
+
+  - target: $.paths['/v1/spaces/{space_id}/releases/{id}'].delete
+    update:
+      x-mcp-include: true
+      x-mcp-priority: 3
+      x-mcp-behavior: destructive
+
+  # ============================================================================
+  # Spaces
+  # https://www.storyblok.com/docs/api/management/spaces
+  # ============================================================================
+
+  - target: $.paths['/v1/spaces'].get
+    update:
+      x-mcp-include: true
+      x-mcp-priority: 1
+      x-mcp-behavior: readOnly
+      description: "Retrieve all spaces accessible by the current user. This operation is region-dependent and does not include a space_id — do NOT assume a region, ask the user first."
+
+  - target: $.paths['/v1/spaces'].post
+    update:
+      x-mcp-include: true
+      x-mcp-priority: 3
+
+  - target: $.paths['/v1/spaces/{space_id}'].get
+    update:
+      x-mcp-include: true
+      x-mcp-priority: 1
+      x-mcp-behavior: readOnly
+
+  - target: $.paths['/v1/spaces/{space_id}'].put
+    update:
+      x-mcp-include: true
+      x-mcp-priority: 3
+      x-mcp-behavior: idempotent
+
+  - target: $.paths['/v1/spaces/{space_id}'].delete
+    update:
+      x-mcp-include: true
+      x-mcp-priority: 3
+      x-mcp-behavior: destructive
+
+  - target: $.paths['/v1/spaces/{space_id}/statistics/{id}'].get
+    update:
+      x-mcp-include: true
+      x-mcp-priority: 3
+      x-mcp-behavior: readOnly
+
+  # ============================================================================
+  # Stories
+  # https://www.storyblok.com/docs/api/management/stories
+  # ============================================================================
+
+  - target: $.paths['/v1/spaces/{space_id}/stories'].get
+    update:
+      x-mcp-include: true
+      x-mcp-priority: 1
+      x-mcp-behavior: readOnly
+
+  - target: $.paths['/v1/spaces/{space_id}/stories'].post
+    update:
+      x-mcp-include: true
+      x-mcp-priority: 1
+      description: |
+        Create a new story. Use the `publish` query parameter (set to true) to publish immediately after creation — but only if the story content is final at the time of creation. If the content may need further edits before going live, omit `publish` (saves as draft) and call publishStory separately once it is ready.
+
+  - target: $.paths['/v1/spaces/{space_id}/stories/bulk_move'].post
+    update:
+      x-mcp-include: true
+      x-mcp-priority: 3
+
+  - target: $.paths['/v1/spaces/{space_id}/stories/reference_counts'].get
+    update:
+      x-mcp-include: true
+      x-mcp-priority: 2
+      x-mcp-behavior: readOnly
+
+  - target: $.paths['/v1/spaces/{space_id}/stories/launch'].get
+    update:
+      x-mcp-include: true
+      x-mcp-priority: 2
+      x-mcp-behavior: readOnly
+
+  - target: $.paths['/v1/spaces/{space_id}/stories/{id}'].get
+    update:
+      x-mcp-include: true
+      x-mcp-priority: 1
+      x-mcp-behavior: readOnly
+
+  - target: $.paths['/v1/spaces/{space_id}/stories/{id}'].put
+    update:
+      x-mcp-include: true
+      x-mcp-priority: 1
+      x-mcp-behavior: idempotent
+      description: |
+        Update a story. WARNING: The `story.content` field is replaced in full — partial content will silently drop all unlisted fields. Always GET the story first (GET /v1/spaces/{space_id}/stories/{id}), then include the complete content object with your changes merged in.
+
+  - target: $.paths['/v1/spaces/{space_id}/stories/{id}'].delete
+    update:
+      x-mcp-include: true
+      x-mcp-priority: 2
+      x-mcp-behavior: destructive
+
+  - target: $.paths['/v1/spaces/{space_id}/stories/{id}/update_uuid'].put
+    update:
+      x-mcp-include: true
+      x-mcp-priority: 3
+      x-mcp-behavior: idempotent
+
+  # GET with side-effect: Discards draft changes (destructive - loses unsaved data)
+  - target: $.paths['/v1/spaces/{space_id}/stories/{id}/discard_changes'].get
+    update:
+      x-mcp-include: true
+      x-mcp-priority: 2
+      x-mcp-behavior: destructive
+
+  - target: $.paths['/v1/spaces/{space_id}/stories/{id}/ai_translate'].put
+    update:
+      x-mcp-include: true
+      x-mcp-priority: 2
+      x-mcp-behavior: idempotent
+
+  - target: $.paths['/v1/spaces/{space_id}/stories/{id}/move'].put
+    update:
+      x-mcp-include: true
+      x-mcp-priority: 2
+      x-mcp-behavior: idempotent
+
+  # GET with side-effect: Restores a deleted story
+  - target: $.paths['/v1/spaces/{space_id}/stories/{id}/undelete'].get
+    update:
+      x-mcp-include: true
+      x-mcp-priority: 3
+      x-mcp-behavior: idempotent
+
+  # GET with side-effect: Restores story from a specific version
+  - target: $.paths['/v1/spaces/{space_id}/stories/{id}/restore_with'].get
+    update:
+      x-mcp-include: true
+      x-mcp-priority: 2
+      x-mcp-behavior: idempotent
+
+  - target: $.paths['/v1/spaces/{space_id}/stories/{id}/overwrite_with'].put
+    update:
+      x-mcp-include: true
+      x-mcp-priority: 2
+      x-mcp-behavior: idempotent
+
+  # PUT: Duplicate story (NOT idempotent - creates new each time)
+  - target: $.paths['/v1/spaces/{space_id}/stories/{id}/duplicate'].put
+    update:
+      x-mcp-include: true
+      x-mcp-priority: 2
+
+  - target: $.paths['/v1/spaces/{space_id}/stories/{id}/merge'].put
+    update:
+      x-mcp-include: true
+      x-mcp-priority: 3
+      x-mcp-behavior: idempotent
+
+  # GET with side-effect: Publishes the story
+  - target: $.paths['/v1/spaces/{space_id}/stories/{id}/publish'].get
+    update:
+      x-mcp-include: true
+      x-mcp-priority: 1
+      x-mcp-behavior: idempotent
+      description: |
+        Publish an existing story by its ID. Use this to publish a story that was previously saved as a draft, or when the story content was not final at creation time. If you are creating a story whose content is already final, prefer using `publish=true` on createStory or updateStory to avoid an extra API call.
+
+  # GET with side-effect: Unpublishes the story
+  - target: $.paths['/v1/spaces/{space_id}/stories/{id}/unpublish'].get
+    update:
+      x-mcp-include: true
+      x-mcp-priority: 1
+      x-mcp-behavior: idempotent
+
+  - target: $.paths['/v1/spaces/{space_id}/stories/{id}/compare'].get
+    update:
+      x-mcp-include: true
+      x-mcp-priority: 2
+      x-mcp-behavior: readOnly
+
+  - target: $.paths['/v1/spaces/{space_id}/stories/{id}/unpublished_dependencies'].post
+    update:
+      x-mcp-include: true
+      x-mcp-priority: 3
+
+  - target: $.paths['/v1/spaces/{space_id}/stories/{id}/versions'].get
+    update:
+      x-mcp-include: true
+      x-mcp-priority: 2
+      x-mcp-behavior: readOnly
+
+  # ============================================================================
+  # Story Versions
+  # ============================================================================
+
+  - target: $.paths['/v1/spaces/{space_id}/story_versions'].get
+    update:
+      x-mcp-include: true
+      x-mcp-priority: 2
+      x-mcp-behavior: readOnly
+
+  - target: $.paths['/v1/spaces/{space_id}/story_versions/{id}'].get
+    update:
+      x-mcp-include: true
+      x-mcp-priority: 2
+      x-mcp-behavior: readOnly
+
+  # ============================================================================
+  # Schema Property Descriptions (for requestBody fields)
+  # ============================================================================
+
+  - target: $.paths['/v1/spaces/{space_id}/asset_folders'].post.requestBody.content['application/json'].schema.properties.asset_folder
+    description: Add description for asset_folder requestBody property
+    update:
+      description: "The asset folder object. See [Asset Folder Object](https://www.storyblok.com/docs/api/management/asset-folders) for details."
+
+  - target: $.paths['/v1/spaces/{space_id}/asset_folders/{id}'].put.requestBody.content['application/json'].schema.properties.asset_folder
+    description: Add description for asset_folder requestBody property
+    update:
+      description: "The asset folder object. See [Asset Folder Object](https://www.storyblok.com/docs/api/management/asset-folders) for details."
+
+  - target: $.paths['/v1/spaces/{space_id}/assets/{id}'].patch.requestBody.content['application/json'].schema.properties.asset
+    description: Add description for asset requestBody property
+    update:
+      description: "The asset object. See [Asset Object](https://www.storyblok.com/docs/api/management/assets) for details."
+
+  - target: $.paths['/v1/spaces/{space_id}/components'].post.requestBody.content['application/json'].schema.properties.component
+    description: Add description for component requestBody property
+    update:
+      description: "The component object. See [Component Object](https://www.storyblok.com/docs/api/management/components) for details."
+
+  - target: $.paths['/v1/spaces/{space_id}/components/{id}'].put.requestBody.content['application/json'].schema.properties.component
+    description: Add description for component requestBody property
+    update:
+      description: "The component object. See [Component Object](https://www.storyblok.com/docs/api/management/components) for details."
+
+  - target: $.paths['/v1/spaces/{space_id}/releases'].post.requestBody.content['application/json'].schema.properties.release
+    description: Add description for release requestBody property
+    update:
+      description: "The release object. See [Release Object](https://www.storyblok.com/docs/api/management/releases) for details."
+
+  - target: $.paths['/v1/spaces/{space_id}/releases/{id}'].patch.requestBody.content['application/json'].schema.properties.release
+    description: Add description for release requestBody property
+    update:
+      description: "The release object. See [Release Object](https://www.storyblok.com/docs/api/management/releases) for details."
+
+  - target: $.paths['/v1/spaces/{space_id}/releases/{id}'].put.requestBody.content['application/json'].schema.properties.release
+    description: Add description for release requestBody property
+    update:
+      description: "The release object. See [Release Object](https://www.storyblok.com/docs/api/management/releases) for details."
+
+  - target: $.paths['/v1/spaces'].post.requestBody.content['application/json'].schema.properties.space
+    description: Add description for space requestBody property
+    update:
+      description: "The space object. See [Space Object](https://www.storyblok.com/docs/api/management/spaces) for details."
+
+  - target: $.paths['/v1/spaces/{space_id}'].put.requestBody.content['application/json'].schema.properties.space
+    description: Add description for space requestBody property
+    update:
+      description: "The space object. See [Space Object](https://www.storyblok.com/docs/api/management/spaces) for details."
+
+  - target: $.paths['/v1/spaces/{space_id}/stories'].post.requestBody.content['application/json'].schema.properties.story
+    description: Add description for story requestBody property
+    update:
+      description: "The story object. See [Story Object](https://www.storyblok.com/docs/api/management/stories) for details."
+
+  - target: $.paths['/v1/spaces/{space_id}/stories/{id}'].put.requestBody.content['application/json'].schema.properties.story
+    description: Add description for story requestBody property
+    update:
+      description: "The story object. See [Story Object](https://www.storyblok.com/docs/api/management/stories) for details."
+
+  # ============================================================================
+  # Bulk: Tag all included operations with API type
+  # ============================================================================
+
+  - target: $.paths..*[?(@['x-mcp-include'])]
+    description: Tag all included MAPI operations with x-mcp-api-type
+    update:
+      x-mcp-api-type: mapi
+
+  # ============================================================================
+  # Cleanup - Remove excluded endpoints
+  # ============================================================================
+
+  - target: $.paths['/v1/spaces/{space_id}/stories/{id}/import.xml']
+    description: Remove import.xml endpoint (not in our allowed list)
+    remove:
+  - target: $.paths['/v1/spaces/{space_id}/stories/{id}/import.json']
+    description: Remove import.json endpoint (not in our allowed list)
+    remove:
+  - target: $.paths['/v1/spaces/{space_id}/stories/{id}/export.xml']
+    description: Remove export.xml endpoint (not in our allowed list)
+    remove:
+  - target: $.paths['/v1/spaces/{space_id}/stories/{id}/export.json']
+    description: Remove export.json endpoint (not in our allowed list)
+    remove:
+
+  - target: $.paths..*[?(@.operationId && !@['x-mcp-include'])]
+    description: Remove all HTTP methods that don't have x-mcp-include flag set to true
+    remove:

@@ -53,7 +53,7 @@ export function registerSearchTool(server: McpServer) {
     "search",
     {
       description:
-        "Search for available Storyblok API endpoints. Returns operations with their behavior hint (readOnly, destructive, or undefined/idempotent for mutating).",
+        "Search for available Storyblok API endpoints. Returns operations with their operationId, behavior, and available response fields.\n\nAlways use this first when you don't know which operation to call. Then pass the operationId to the matching execute tool based on the behavior field:\n- \"readOnly\" → execute_readonly\n- \"destructive\" → execute_destructive\n- \"idempotent\" or no behavior → execute",
       inputSchema: {
         query: z
           .string()
