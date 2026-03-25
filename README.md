@@ -46,23 +46,19 @@ STORYBLOK_API_TOKEN=your_token_here
 
 ### Prerequisites
 
-Before configuring your MCP client, ensure you have:
-
-1. Built the server: `npm install && npm run build`
+1. Node.js >= 20.6.0
 2. Your Storyblok Personal Access Token from [Storyblok Account Settings](https://app.storyblok.com/#!/me/account?tab=token)
 
-### Quick Setup
+### Quick Setup (via npx)
+
+No installation needed — just configure your MCP client to run the package directly:
 
 <details>
 <summary><b>Claude Code</b></summary>
 
-Add the server using the Claude Code CLI:
-
 ```bash
-claude mcp add storyblok node /absolute/path/to/storyblok-mcp/dist/index.js --env STORYBLOK_API_TOKEN=your_token_here
+claude mcp add storyblok npx storyblok-mcp --env STORYBLOK_API_TOKEN=your_token_here
 ```
-
-Replace `/absolute/path/to/storyblok-mcp` with the actual path to this repository and `your_token_here` with your actual Storyblok token.
 
 </details>
 
@@ -75,14 +71,12 @@ Edit your Claude Desktop configuration file:
 **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
 **Linux**: `~/.config/Claude/claude_desktop_config.json`
 
-Add the following configuration:
-
 ```json
 {
   "mcpServers": {
     "storyblok": {
-      "command": "node",
-      "args": ["/absolute/path/to/storyblok-mcp/dist/index.js"],
+      "command": "npx",
+      "args": ["-y", "storyblok-mcp"],
       "env": {
         "STORYBLOK_API_TOKEN": "your_token_here"
       }
@@ -91,8 +85,6 @@ Add the following configuration:
 }
 ```
 
-Replace `/absolute/path/to/storyblok-mcp` with the actual path to this repository and `your_token_here` with your actual Storyblok token.
-
 After saving, restart Claude Desktop.
 
 </details>
@@ -100,14 +92,14 @@ After saving, restart Claude Desktop.
 <details>
 <summary><b>Other MCP Clients</b></summary>
 
-For other MCP clients (Cline, Cursor, etc.), add this server configuration to your client's MCP settings:
+For other MCP clients (Cline, Cursor, etc.), use the same npx-based configuration:
 
 ```json
 {
   "mcpServers": {
     "storyblok": {
-      "command": "node",
-      "args": ["/absolute/path/to/storyblok-mcp/dist/index.js"],
+      "command": "npx",
+      "args": ["-y", "storyblok-mcp"],
       "env": {
         "STORYBLOK_API_TOKEN": "your_token_here"
       }
@@ -120,32 +112,29 @@ Refer to your client's documentation for the specific configuration file locatio
 
 </details>
 
-## Setup
-
-```bash
-npm install
-npm run build
-npm start
-```
-
 ## Development
 
 ```bash
-npm run dev
+npm install
+npm run dev       # start with file watching
+npm run start     # start without file watching
+npm run inspect   # open MCP Inspector UI
+npm run typecheck # run TypeScript type checking
 ```
 
-## Building
+## Versioning
+
+This package follows [Semantic Versioning](https://semver.org/):
 
 ```bash
-npm run build
+npm version patch  # bug fixes (0.1.0 → 0.1.1)
+npm version minor  # new features (0.1.0 → 0.2.0)
+npm version major  # breaking changes (0.1.0 → 1.0.0)
 ```
 
-## Testing
-
-Use the MCP Inspector to interactively test the server:
+After bumping, push the tag and publish:
 
 ```bash
-npm run inspect
+git push --follow-tags
+npm publish
 ```
-
-This opens a web UI where you can list tools, call them with test parameters, and inspect responses.
