@@ -49,16 +49,24 @@ STORYBLOK_API_TOKEN=your_token_here
 1. Node.js >= 20.6.0
 2. Your Storyblok Personal Access Token from [Storyblok Account Settings](https://app.storyblok.com/#!/me/account?tab=token)
 
-### Quick Setup (via npx)
+### Quick Setup
 
-No installation needed — just configure your MCP client to run the package directly:
+Clone the repository and install dependencies:
+
+```bash
+git clone https://github.com/storyblok/mcp-server.git
+cd mcp-server
+npm install
+```
 
 <details>
 <summary><b>Claude Code</b></summary>
 
 ```bash
-claude mcp add storyblok npx storyblok-mcp --env STORYBLOK_API_TOKEN=your_token_here
+claude mcp add storyblok node /absolute/path/to/mcp-server/bin/storyblok-mcp.js --env STORYBLOK_API_TOKEN=your_token_here
 ```
+
+Replace `/absolute/path/to/mcp-server` with the actual path to the cloned repository.
 
 </details>
 
@@ -75,8 +83,8 @@ Edit your Claude Desktop configuration file:
 {
   "mcpServers": {
     "storyblok": {
-      "command": "npx",
-      "args": ["-y", "storyblok-mcp"],
+      "command": "node",
+      "args": ["/absolute/path/to/mcp-server/bin/storyblok-mcp.js"],
       "env": {
         "STORYBLOK_API_TOKEN": "your_token_here"
       }
@@ -85,21 +93,21 @@ Edit your Claude Desktop configuration file:
 }
 ```
 
-After saving, restart Claude Desktop.
+Replace `/absolute/path/to/mcp-server` with the actual path to the cloned repository. After saving, restart Claude Desktop.
 
 </details>
 
 <details>
 <summary><b>Other MCP Clients</b></summary>
 
-For other MCP clients (Cline, Cursor, etc.), use the same npx-based configuration:
+For other MCP clients (Cline, Cursor, etc.), use the same configuration:
 
 ```json
 {
   "mcpServers": {
     "storyblok": {
-      "command": "npx",
-      "args": ["-y", "storyblok-mcp"],
+      "command": "node",
+      "args": ["/absolute/path/to/mcp-server/bin/storyblok-mcp.js"],
       "env": {
         "STORYBLOK_API_TOKEN": "your_token_here"
       }
@@ -108,7 +116,7 @@ For other MCP clients (Cline, Cursor, etc.), use the same npx-based configuratio
 }
 ```
 
-Refer to your client's documentation for the specific configuration file location.
+Replace `/absolute/path/to/mcp-server` with the actual path to the cloned repository. Refer to your client's documentation for the specific configuration file location.
 
 </details>
 
@@ -120,21 +128,4 @@ npm run dev       # start with file watching
 npm run start     # start without file watching
 npm run inspect   # open MCP Inspector UI
 npm run typecheck # run TypeScript type checking
-```
-
-## Versioning
-
-This package follows [Semantic Versioning](https://semver.org/):
-
-```bash
-npm version patch  # bug fixes (0.1.0 → 0.1.1)
-npm version minor  # new features (0.1.0 → 0.2.0)
-npm version major  # breaking changes (0.1.0 → 1.0.0)
-```
-
-After bumping, push the tag and publish:
-
-```bash
-git push --follow-tags
-npm publish
 ```
