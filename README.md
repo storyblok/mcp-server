@@ -1,131 +1,49 @@
-> [!IMPORTANT]
-> **Research Project** — This is an experimental project from the Storyblok Innovation Lab and may change without notice.
+# Storyblok MCP Server (Archived)
 
-# Storyblok MCP Server
+> [!CAUTION]
+> **This repository has been archived.** It is no longer maintained and will not receive updates.
+>
+> The Storyblok MCP Server is now **fully hosted** — no local clone or Node.js required.
+> Please use the hosted version at **<https://mcp.labs.storyblok.com/>** for setup instructions.
 
-An MCP (Model Context Protocol) server for the Storyblok API.
+This repository contained a locally-run MCP (Model Context Protocol) server for the Storyblok Management API.
 
-## Features
+It has been superseded by the **hosted Storyblok MCP Server**, which requires no installation, and supports all major MCP clients out of the box.
 
-- **Tool Search**: Discover available Storyblok API endpoints by keyword, returning operationIds, behavior hints, and available response fields
-- **Tool Execution**: Execute API calls with automatic parameter handling, split by behavior:
-  - `execute_readonly` — safe read-only operations (GET)
-  - `execute` — mutating/idempotent operations (POST, PUT, PATCH)
-  - `execute_destructive` — destructive operations (DELETE)
-- **Asset Upload**: Upload files or images to Storyblok in a single step — handles asset record creation, S3 upload, and finalization automatically; supports local file paths and HTTP/HTTPS URLs
-- **Pagination**: List operations support `page` and `per_page` parameters; check `pagination.total_pages` in responses
-- **Field Filtering**: Use the `fields` parameter on execute tools to limit large responses to only the fields you need
+## Migration
 
-## Configuration
+Connect directly to the hosted server at:
 
-This MCP server requires a Storyblok API token to make real API calls.
-
-### Setting up your token
-
-1. Get your Personal Access Token from [Storyblok Account Settings](https://app.storyblok.com/#!/me/account?tab=token)
-2. Set the environment variable:
-
-```bash
-export STORYBLOK_API_TOKEN=your_token_here
+```text
+https://mcp.labs.storyblok.com/mcp
 ```
 
-Or create a `.env` file (gitignored):
+Authentication is done via a Bearer token (your Storyblok Personal Access Token) in the `Authorization` header.
+
+### Claude Code
 
 ```bash
-STORYBLOK_API_TOKEN=your_token_here
+claude mcp add --transport http Storyblok https://mcp.labs.storyblok.com/mcp --header "Authorization: Bearer your_token_here"
 ```
 
-### Configuration Options
+### Claude Desktop
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `STORYBLOK_API_TOKEN` | Yes | - | Your Storyblok Personal Access Token |
-| `STORYBLOK_API_URL` | No | Auto-detected | Override the API base URL (region is auto-detected from `space_id`) |
-
-## MCP Client Configuration
-
-### Prerequisites
-
-1. Node.js >= 20.6.0
-2. Your Storyblok Personal Access Token from [Storyblok Account Settings](https://app.storyblok.com/#!/me/account?tab=token)
-
-### Quick Setup
-
-Clone the repository and install dependencies:
-
-```bash
-git clone https://github.com/storyblok/mcp-server.git
-cd mcp-server
-npm install
-```
-
-<details>
-<summary><b>Claude Code</b></summary>
-
-```bash
-claude mcp add storyblok node /absolute/path/to/mcp-server/bin/storyblok-mcp.js --env STORYBLOK_API_TOKEN=your_token_here
-```
-
-Replace `/absolute/path/to/mcp-server` with the actual path to the cloned repository.
-
-</details>
-
-<details>
-<summary><b>Claude Desktop</b></summary>
-
-Edit your Claude Desktop configuration file:
-
-**macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
-**Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
-**Linux**: `~/.config/Claude/claude_desktop_config.json`
+Edit your configuration file (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
 
 ```json
 {
   "mcpServers": {
-    "storyblok": {
-      "command": "node",
-      "args": ["/absolute/path/to/mcp-server/bin/storyblok-mcp.js"],
-      "env": {
-        "STORYBLOK_API_TOKEN": "your_token_here"
+    "Storyblok": {
+      "type": "http",
+      "url": "https://mcp.labs.storyblok.com/mcp",
+      "headers": {
+        "Authorization": "Bearer your_token_here"
       }
     }
   }
 }
 ```
 
-Replace `/absolute/path/to/mcp-server` with the actual path to the cloned repository. After saving, restart Claude Desktop.
+### Other Clients (Cursor, VS Code, Windsurf, etc.)
 
-</details>
-
-<details>
-<summary><b>Other MCP Clients</b></summary>
-
-For other MCP clients (Cline, Cursor, etc.), use the same configuration:
-
-```json
-{
-  "mcpServers": {
-    "storyblok": {
-      "command": "node",
-      "args": ["/absolute/path/to/mcp-server/bin/storyblok-mcp.js"],
-      "env": {
-        "STORYBLOK_API_TOKEN": "your_token_here"
-      }
-    }
-  }
-}
-```
-
-Replace `/absolute/path/to/mcp-server` with the actual path to the cloned repository. Refer to your client's documentation for the specific configuration file location.
-
-</details>
-
-## Development
-
-```bash
-npm install
-npm run dev       # start with file watching
-npm run start     # start without file watching
-npm run inspect   # open MCP Inspector UI
-npm run typecheck # run TypeScript type checking
-```
+See the full setup guide at **<https://mcp.labs.storyblok.com/>** for client-specific instructions, one-click installs, and role-based access options.
